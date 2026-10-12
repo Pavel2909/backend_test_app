@@ -15,9 +15,9 @@
 │   ├── inventory_api/              сервис 1: HTTP API (aiohttp)
 │   │   ├── app.py                  сборка приложения
 │   │   ├── handlers.py             HTTP-обработчики и обработка ошибок
-│   │   ├── service.py              бизнес-логика: запись операции и публикация события
+│   │   ├── service.py              бизнес-логика: запись операции и пробуждение outbox relay
 │   │   ├── repository.py           SQL-запросы остатков и аналитики
-│   │   ├── publisher.py            публикация в Redis pub/sub
+│   │   ├── outbox.py               transactional outbox: запись событий и relay в Redis pub/sub
 │   │   └── schemas.py              модели запросов и ответов
 │   └── analytics_worker/           сервис 2: подписчик Redis pub/sub
 │       ├── consumer.py             подписка, валидация событий, переподключение
@@ -46,6 +46,19 @@ curl -X POST localhost:8080/issues -H "Content-Type: application/json" -d '{"sku
 curl "localhost:8080/stock?warehouse=WH-1"
 curl "localhost:8080/stock/summary?top_n=5"
 ```
+
+### Доставка событий (transactional outbox)
+
+Операция и её событие записываются в одной транзакции: строка в `stock_events` и строка в `outbox`.
+Фоновый relay внутри `inventory_api` забирает строки `outbox` (`FOR UPDATE SKIP LOCKED`, поэтому можно
+запускать несколько инстансов API), публикует их в Redis и удаляет только после успешной публикации.
+Relay будится сразу после коммита операции, а при недоступности Redis повторяет попытки
+с экспоненциальной задержкой; кроме того, раз в `OUTBOX_POLL_INTERVAL` он опрашивает таблицу.
+
+Гарантия — at-least-once: при сбое между публикацией и удалением строки событие уйдёт повторно.
+`analytics_worker` обрабатывает события идемпотентно (пересчитывает агрегат по `stock_events`).
+Redis pub/sub не хранит сообщения для отключённых подписчиков, поэтому пропуски закрываются
+пересборкой агрегатов при каждой подписке `analytics_worker`.
 
 ### Тесты
 
@@ -80,7 +93,8 @@ python -m build --wheel
 pip install dist/warehouse_services-0.1.0-py3-none-any.whl
 ```
 
-Переменные окружения: `DATABASE_URL`, `REDIS_URL`, `API_HOST`, `API_PORT`, `DB_POOL_SIZE`, `LOG_LEVEL`.
+Переменные окружения: `DATABASE_URL`, `REDIS_URL`, `API_HOST`, `API_PORT`, `DB_POOL_SIZE`,
+`OUTBOX_BATCH_SIZE` (по умолчанию 100), `OUTBOX_POLL_INTERVAL` (секунды, по умолчанию 1.0), `LOG_LEVEL`.
 
 ```bash
 warehouse-migrate upgrade head

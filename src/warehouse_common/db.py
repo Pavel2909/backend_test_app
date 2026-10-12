@@ -63,6 +63,20 @@ stock_agg = sa.Table(
     ),
 )
 
+outbox = sa.Table(
+    "outbox",
+    metadata,
+    sa.Column("id", sa.BigInteger, sa.Identity(), primary_key=True),
+    sa.Column("event_type", sa.String(64), nullable=False),
+    sa.Column("payload", sa.Text, nullable=False),
+    sa.Column(
+        "created_at",
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+    ),
+)
+
 
 def signed_qty() -> sa.ColumnElement[int]:
     return sa.case(

@@ -56,7 +56,7 @@ def migrated_database(settings: Settings) -> None:
 async def engine(settings: Settings) -> AsyncIterator[AsyncEngine]:
     engine = create_engine(settings)
     async with engine.begin() as conn:
-        await conn.execute(sa.text("TRUNCATE stock_events, stock_agg RESTART IDENTITY"))
+        await conn.execute(sa.text("TRUNCATE stock_events, stock_agg, outbox RESTART IDENTITY"))
     yield engine
     await engine.dispose()
 

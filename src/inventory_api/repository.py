@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from inventory_api.outbox import enqueue
 from inventory_api.schemas import (
     OperationRequest,
     SkuTotal,
@@ -122,4 +123,6 @@ class InventoryRepository:
             .returning(*stock_events.c)
         )
         row = (await conn.execute(stmt)).one()
-        return StockOperation.model_validate(row._asdict())
+        operation = StockOperation.model_validate(row._asdict())
+        await enqueue(conn, operation.to_event())
+        return operation

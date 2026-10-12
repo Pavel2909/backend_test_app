@@ -10,6 +10,8 @@ class Settings:
     api_host: str = "0.0.0.0"
     api_port: int = 8080
     db_pool_size: int = 10
+    outbox_batch_size: int = 100
+    outbox_poll_interval: float = 1.0
     log_level: str = "INFO"
 
     @classmethod
@@ -21,6 +23,10 @@ class Settings:
             api_host=os.getenv("API_HOST", defaults.api_host),
             api_port=int(os.getenv("API_PORT", defaults.api_port)),
             db_pool_size=int(os.getenv("DB_POOL_SIZE", defaults.db_pool_size)),
+            outbox_batch_size=int(os.getenv("OUTBOX_BATCH_SIZE", defaults.outbox_batch_size)),
+            outbox_poll_interval=float(
+                os.getenv("OUTBOX_POLL_INTERVAL", defaults.outbox_poll_interval)
+            ),
             log_level=os.getenv("LOG_LEVEL", defaults.log_level).upper(),
         )
 
