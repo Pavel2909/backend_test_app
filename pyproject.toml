@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "warehouse-services"
+version = "0.1.0"
+description = "Inventory API and analytics worker communicating via Redis pub/sub"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.9,<4",
+    "alembic>=1.13,<2",
+    "asyncpg>=0.29",
+    "pydantic>=2.6,<3",
+    "redis>=5.0",
+    "sqlalchemy[asyncio]>=2.0.25,<2.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8",
+    "pytest-aiohttp>=1.0.5",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+inventory-api = "inventory_api.__main__:main"
+analytics-worker = "analytics_worker.__main__:main"
+warehouse-migrate = "warehouse_common.migrate:main"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/warehouse_common",
+    "src/inventory_api",
+    "src/analytics_worker",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
