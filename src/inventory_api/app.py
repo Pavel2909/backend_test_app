@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 
 from aiohttp import web
 
+from inventory_api import openapi
 from inventory_api.handlers import InventoryHandlers, error_middleware
 from inventory_api.outbox import OutboxRelay
 from inventory_api.repository import InventoryRepository
@@ -33,5 +34,6 @@ def create_app(settings: Settings) -> web.Application:
 
     app = web.Application(middlewares=[error_middleware])
     app.add_routes(InventoryHandlers(service).routes())
+    app.add_routes(openapi.routes())
     app.cleanup_ctx.append(lifespan)
     return app

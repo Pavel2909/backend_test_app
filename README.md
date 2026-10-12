@@ -15,6 +15,7 @@
 │   ├── inventory_api/              сервис 1: HTTP API (aiohttp)
 │   │   ├── app.py                  сборка приложения
 │   │   ├── handlers.py             HTTP-обработчики и обработка ошибок
+│   │   ├── openapi.py              спецификация OpenAPI и Swagger UI
 │   │   ├── service.py              бизнес-логика: запись операции и пробуждение outbox relay
 │   │   ├── repository.py           SQL-запросы остатков и аналитики
 │   │   ├── outbox.py               transactional outbox: запись событий и relay в Redis pub/sub
@@ -46,6 +47,14 @@ curl -X POST localhost:8080/issues -H "Content-Type: application/json" -d '{"sku
 curl "localhost:8080/stock?warehouse=WH-1"
 curl "localhost:8080/stock/summary?top_n=5"
 ```
+
+Документация API:
+
+- Swagger UI: http://localhost:8080/docs
+- спецификация OpenAPI: http://localhost:8080/openapi.json
+
+Спецификация собирается из pydantic-моделей запросов и ответов. Swagger UI загружается
+из CDN (jsdelivr), поэтому странице `/docs` нужен доступ в интернет.
 
 ### Доставка событий (transactional outbox)
 

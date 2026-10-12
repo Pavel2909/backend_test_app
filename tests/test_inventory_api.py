@@ -155,3 +155,37 @@ async def _next_message(pubsub) -> dict:
         message = await pubsub.get_message(timeout=1)
         if message is not None:
             return message
+
+
+async def test_openapi_describes_every_route(client):
+    response = await client.get("/openapi.json")
+
+    assert response.status == 200
+    spec = await response.json()
+    routes = {
+        (route.method.lower(), route.resource.canonical)
+        for route in client.server.app.router.routes()
+        if route.method != "HEAD" and route.resource.canonical not in {"/docs", "/openapi.json"}
+    }
+    assert {(method, path) for path, item in spec["paths"].items() for method in item} == routes
+    schemas = spec["components"]["schemas"]
+    assert all(ref.rsplit("/", 1)[1] in schemas for ref in _refs(spec))
+
+
+async def test_swagger_ui(client):
+    response = await client.get("/docs")
+
+    assert response.status == 200
+    assert response.content_type == "text/html"
+    assert 'url: "openapi.json"' in await response.text()
+
+
+def _refs(node) -> list[str]:
+    if isinstance(node, list):
+        return [ref for item in node for ref in _refs(item)]
+    if not isinstance(node, dict):
+        return []
+    refs = [ref for value in node.values() for ref in _refs(value)]
+    if "$ref" in node:
+        refs.append(node["$ref"])
+    return refs

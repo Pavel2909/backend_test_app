@@ -2,10 +2,17 @@ import json
 from typing import Any
 
 from aiohttp import web
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from inventory_api.repository import InsufficientStockError
-from inventory_api.schemas import OperationRequest, StockQuery, SummaryQuery
+from inventory_api.schemas import (
+    ErrorResponse,
+    InsufficientStockResponse,
+    OperationRequest,
+    StockQuery,
+    SummaryQuery,
+    ValidationErrorResponse,
+)
 from inventory_api.service import InventoryService
 
 
@@ -13,25 +20,28 @@ class MalformedJSONError(Exception):
     pass
 
 
+def _error_response(body: BaseModel, status: int) -> web.Response:
+    return web.json_response(body.model_dump(mode="json"), status=status)
+
+
 @web.middleware
 async def error_middleware(request: web.Request, handler: Any) -> web.StreamResponse:
     try:
         return await handler(request)
     except MalformedJSONError:
-        return web.json_response({"error": "malformed_json"}, status=400)
+        return _error_response(ErrorResponse(error="malformed_json"), 400)
     except ValidationError as exc:
         details = exc.errors(include_url=False, include_context=False, include_input=False)
-        return web.json_response({"error": "validation_error", "details": details}, status=422)
+        return _error_response(ValidationErrorResponse(details=details), 422)
     except InsufficientStockError as exc:
-        return web.json_response(
-            {
-                "error": "insufficient_stock",
-                "warehouse": exc.warehouse,
-                "sku": exc.sku,
-                "requested": exc.requested,
-                "available": exc.available,
-            },
-            status=409,
+        return _error_response(
+            InsufficientStockResponse(
+                warehouse=exc.warehouse,
+                sku=exc.sku,
+                requested=exc.requested,
+                available=exc.available,
+            ),
+            409,
         )
 
 

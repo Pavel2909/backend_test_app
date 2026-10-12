@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -67,3 +67,20 @@ class SkuTotal(BaseModel):
 class StockSummary(BaseModel):
     warehouses: list[WarehouseSummary]
     top_skus: list[SkuTotal]
+
+
+class ErrorResponse(BaseModel):
+    error: Literal["malformed_json"]
+
+
+class ValidationErrorResponse(BaseModel):
+    error: Literal["validation_error"] = "validation_error"
+    details: list[dict[str, Any]]
+
+
+class InsufficientStockResponse(BaseModel):
+    error: Literal["insufficient_stock"] = "insufficient_stock"
+    warehouse: str
+    sku: str
+    requested: int
+    available: int
